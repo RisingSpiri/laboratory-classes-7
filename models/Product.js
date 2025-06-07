@@ -1,3 +1,6 @@
+const { getDatabase } = require("../database");
+const COLLECTION_NAME = "products";
+
 class Product {
   constructor(name, description, price) {
     this.name = name;
@@ -5,30 +8,44 @@ class Product {
     this.price = price;
   }
 
-  static #products = [];
-
-  static getAll() {
-    return this.#products;
+  save() {
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).findOne({ name: this.name })
+      .then(existing => {
+        if (existing) {
+          throw new Error("Product already exists");
+        }
+        return db.collection(COLLECTION_NAME).insertOne({
+          name: this.name,
+          description: this.description,
+          price: this.price
+        });
+      });
   }
 
-  static add(product) {
-    this.#products.push(product);
+  static fetchAll() {
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).find().toArray();
   }
 
   static findByName(name) {
-    return this.#products.find((product) => product.name === name);
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).findOne({ name });
   }
 
   static deleteByName(name) {
-    this.#products = this.#products.filter((product) => product.name !== name);
+    const db = getDatabase();
+    return db.collection(COLLECTION_NAME).deleteOne({ name });
   }
 
-  static getLast() {
-    if (!this.#products.length) {
-      return;
-    }
-
-    return this.#products[this.#products.length - 1];
+  static async getLast() {
+    const db = getDatabase();
+    const last = await db.collection(COLLECTION_NAME)
+      .find()
+      .sort({ _id: -1 })
+      .limit(1)
+      .toArray();
+    return last[0] || null;
   }
 }
 
